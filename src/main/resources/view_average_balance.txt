@@ -1,0 +1,67 @@
+{
+  $collection: "balances",
+  $aggregation: [
+    {
+      $lookup: {
+        from: "accounts",
+        localField: "accountId",
+        foreignField: "_id",
+        as: "account",
+      },
+    },
+    {
+      $unwind: {
+        path: "$account",
+        preserveNullAndEmptyArrays: false,
+      },
+    },
+    {
+      $lookup: {
+        from: "active_products",
+        localField: "account.passiveProductId",
+        foreignField: "_id",
+        as: "passiveProduct",
+      },
+    },
+    {
+      $unwind: {
+        path: "$passiveProduct",
+        preserveNullAndEmptyArrays: false,
+      },
+    },
+    {
+      $project: {
+        product: "$passiveProduct.name",
+        clientId: "$account.clientId",
+        amount: "$amount",
+        date: {
+          $dateToString: {
+            format: "%Y-%m-%d",
+            date: "$date",
+          },
+        },
+      },
+    },
+    {
+      $group: {
+        _id: {
+          product: "$product",
+          date: "$date",
+          clientId: "$clientId",
+        },
+        average: {
+          $avg: "$amount",
+        },
+      },
+    },
+    {
+      $project: {
+        _id: 0,
+        product: "$_id.product",
+        clientId: "$_id.clientId",
+        date: "$_id.date",
+        average: 1,
+      },
+    },
+  ]
+}
